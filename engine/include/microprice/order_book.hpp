@@ -148,6 +148,14 @@ class OrderBook {
     return index == kNil ? 0 : pool_[index].qty;
   }
 
+  [[nodiscard]] std::optional<Price> order_price(OrderId id) const noexcept {
+    const NodeIndex index = ids_.find(id);
+    if (index == kNil) {
+      return std::nullopt;
+    }
+    return pool_[index].price;
+  }
+
   // Quantity resting ahead of an order at its price level (time priority).
   [[nodiscard]] Qty queue_ahead(OrderId id) const noexcept {
     const NodeIndex index = ids_.find(id);

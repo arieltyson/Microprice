@@ -37,6 +37,7 @@ class Engine {
   Qty qty_at(Price price) const { return book_.qty_at(price); }
   Qty order_qty(OrderId id) const { return book_.order_qty(id); }
   Qty queue_ahead(OrderId id) const { return book_.queue_ahead(id); }
+  std::optional<Price> order_price(OrderId id) const { return book_.order_price(id); }
   bool contains(OrderId id) const { return book_.contains(id); }
   std::uint32_t order_count() const { return book_.order_count(); }
 
@@ -74,6 +75,33 @@ class Engine {
       applied += feed::apply_lobster(book_, m, next_aggressor_) ? 1 : 0;
     }
     return applied;
+  }
+
+  // Replays every row and records the best bid and ask after each one, in
+  // the LOBSTER order book file convention (USD x 10000, sentinel prices for an
+  // empty side).
+  py::tuple replay_top_of_book(py::array_t<std::int64_t> ts, py::array_t<std::int32_t> type,
+                               py::array_t<std::uint64_t> id, py::array_t<std::int64_t> size,
+                               py::array_t<std::int64_t> price, py::array_t<std::int8_t> direction) {
+    const py::ssize_t n = ts.shape(0);
+    py::array_t<std::int64_t> ask_px(n), ask_sz(n), bid_px(n), bid_sz(n);
+    auto ap = ask_px.mutable_unchecked<1>();
+    auto as = ask_sz.mutable_unchecked<1>();
+    auto bp = bid_px.mutable_unchecked<1>();
+    auto bs = bid_sz.mutable_unchecked<1>();
+    constexpr std::int64_t kEmptyAsk = 9'999'999'999;
+    for (py::ssize_t r = 0; r < n; ++r) {
+      apply_lobster(ts, type, id, size, price, direction, static_cast<std::size_t>(r),
+                    static_cast<std::size_t>(r) + 1);
+      const auto ask = book_.best_ask();
+      const auto bid = book_.best_bid();
+      ap(r) = ask ? *ask * 100 : kEmptyAsk;
+      as(r) = ask ? book_.qty_at(*ask) : 0;
+      bp(r) = bid ? *bid * 100 : -kEmptyAsk;
+      bs(r) = bid ? book_.qty_at(*bid) : 0;
+    }
+    sink_.events.clear();
+    return py::make_tuple(ask_px, ask_sz, bid_px, bid_sz);
   }
 
   // Returns and clears every event since the last drain, as numpy columns.
@@ -147,10 +175,12 @@ PYBIND11_MODULE(_engine, m) {
       .def("qty_at", &Engine::qty_at)
       .def("order_qty", &Engine::order_qty)
       .def("queue_ahead", &Engine::queue_ahead)
+      .def("order_price", &Engine::order_price)
       .def("contains", &Engine::contains)
       .def("order_count", &Engine::order_count)
       .def("top_levels", &Engine::top_levels, py::arg("side"), py::arg("n"))
       .def("apply_lobster", &Engine::apply_lobster)
+      .def("replay_top_of_book", &Engine::replay_top_of_book)
       .def("drain_events", &Engine::drain_events)
       .def("pending_events", &Engine::pending_events);
 }

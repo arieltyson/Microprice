@@ -109,6 +109,12 @@ TEST_F(OrderBookTest, ReportsBookFullWithoutAllocating) {
   EXPECT_EQ(small.submit({3, Side::Buy, OrderType::Limit, 5, 1, 0}), Status::BookFull);
 }
 
+TEST_F(OrderBookTest, ReportsRestingOrderPrice) {
+  limit(1, Side::Sell, 105, 5);
+  EXPECT_EQ(book.order_price(1), 105);
+  EXPECT_FALSE(book.order_price(2).has_value());
+}
+
 TEST_F(OrderBookTest, TopLevelsWalkOutwardFromTheTouch) {
   limit(1, Side::Buy, 100, 5);
   limit(2, Side::Buy, 98, 7);
