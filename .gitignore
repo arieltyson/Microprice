@@ -1,0 +1,123 @@
+# Operating System
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Desktop.ini
+*~
+
+# IDE & Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.code-workspace
+*.swp
+*.swo
+.cache/
+.clangd/
+
+# C++ Build Artifacts
+build/
+cmake-build-*/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+_deps/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+perf.data
+perf.data.old
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+# uv.lock is tracked
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+renv/library/
+renv/staging/
+
+# kdb+/q
+q.k.local
+*.q.log
+tickstore/hdb/
+tickstore/tplog/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+*.crc
+
+# Dashboard (Node.js)
+node_modules/
+dashboard/dist/
+dashboard/.vite/
+npm-debug.log*
+# package-lock.json is tracked
+
+# Data (downloaded or generated, never committed)
+data/*
+!data/README.md
+*.parquet
+
+# Models
+.hf_cache/
+research/models/
+
+# Security & Secrets
+.env
+.env.*
+!.env.example
+.netrc
+*.pem
+*.key
+k4.lic
+kc.lic
+.aws/
+*service-account*.json
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local Databases & Logs
+*.sqlite
+*.db
+*.log
+logs/
+
+# Testing & Coverage
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+lcov.info
+playwright-report/
+test-results/
+
+# Generated Results
+results/
