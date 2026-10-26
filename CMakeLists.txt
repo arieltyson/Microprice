@@ -49,3 +49,16 @@ endif()
 
 add_subdirectory(engine)
 add_subdirectory(feed)
+
+if(MICROPRICE_BUILD_PYTHON)
+  find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
+  set(PYBIND11_FINDPYTHON ON)
+  FetchContent_Declare(pybind11
+    URL https://github.com/pybind/pybind11/archive/refs/tags/v2.13.6.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  FetchContent_MakeAvailable(pybind11)
+  pybind11_add_module(_engine engine/python/bindings.cpp)
+  target_link_libraries(_engine PRIVATE microprice::feed)
+  # The module is built straight into the research package.
+  set_target_properties(_engine PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/research/microprice)
+endif()

@@ -1,0 +1,43 @@
+[project]
+name = "microprice"
+version = "0.1.0"
+description = "Research layer for the Microprice market-making platform"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "numpy>=2.1",
+  "pandas>=2.2",
+  "pyarrow>=17",
+  "lightgbm>=4.5",
+  "cvxpy>=1.6",
+  "scipy>=1.14",
+  "websockets>=13",
+  "requests>=2.32",
+]
+
+[project.optional-dependencies]
+nlp = ["transformers>=4.46", "torch>=2.5"]
+spark = ["pyspark>=3.5,<3.6"]
+kdb = ["pykx>=3.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "mypy>=1.13", "ruff>=0.7", "pandas-stubs>=2.2", "types-requests>=2.32"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+files = ["microprice"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
