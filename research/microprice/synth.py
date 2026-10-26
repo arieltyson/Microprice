@@ -8,7 +8,9 @@ around a latent fair value V:
 * Limit orders arrive on both sides, more often on the side V is moving
   toward, at a geometric depth from the touch.
 * Market orders are informed: the chance of a buy rises with V - mid.
-* Cancels remove or shrink random resting orders.
+* Each resting order is cancelled at a constant hazard rate, so book depth
+  settles where arrivals balance cancellations and executions (as in the
+  Cont, Stoikov and Talreja queueing model).
 
 Because order flow leans toward V, book imbalance and the micro-price carry
 real information about the next mid-price move, which is the structure the
@@ -41,20 +43,20 @@ class SymbolProfile:
     symbol: str
     price_usd: float
     daily_vol: float  # standard deviation of the daily return
-    rate_per_s: float  # order flow events per second
+    rate_per_s: float  # limit and market order arrivals per second
 
 
 PROFILES = [
-    SymbolProfile("AAPL", 230.0, 0.015, 11.0),
-    SymbolProfile("MSFT", 420.0, 0.014, 10.0),
-    SymbolProfile("AMZN", 190.0, 0.019, 10.5),
-    SymbolProfile("GOOG", 165.0, 0.017, 10.0),
-    SymbolProfile("NVDA", 135.0, 0.030, 12.0),
-    SymbolProfile("META", 570.0, 0.021, 9.5),
-    SymbolProfile("JPM", 220.0, 0.013, 9.5),
-    SymbolProfile("XOM", 120.0, 0.014, 9.0),
-    SymbolProfile("JNJ", 160.0, 0.010, 9.0),
-    SymbolProfile("PG", 170.0, 0.009, 9.0),
+    SymbolProfile("AAPL", 230.0, 0.015, 6.0),
+    SymbolProfile("MSFT", 420.0, 0.014, 5.5),
+    SymbolProfile("AMZN", 190.0, 0.019, 5.8),
+    SymbolProfile("GOOG", 165.0, 0.017, 5.5),
+    SymbolProfile("NVDA", 135.0, 0.030, 6.5),
+    SymbolProfile("META", 570.0, 0.021, 5.2),
+    SymbolProfile("JPM", 220.0, 0.013, 5.2),
+    SymbolProfile("XOM", 120.0, 0.014, 5.0),
+    SymbolProfile("JNJ", 160.0, 0.010, 5.0),
+    SymbolProfile("PG", 170.0, 0.009, 5.0),
 ]
 
 DATES = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]
@@ -62,11 +64,11 @@ DATES = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]
 
 @dataclass(frozen=True)
 class FlowParams:
-    p_limit: float = 0.55
-    p_cancel: float = 0.35  # the remainder are market orders
-    informed_kappa: float = 0.6  # logistic slope of market order direction, per tick of V - mid
-    limit_tilt: float = 0.25  # logistic slope of limit side choice, per tick of V - mid
-    depth_geometric_p: float = 0.30
+    limit_share: float = 0.85  # of arrivals; the remainder are market orders
+    cancel_rate: float = 0.30  # per resting order per second
+    informed_kappa: float = 0.15  # logistic slope of market order direction, per tick of V - mid
+    limit_tilt: float = 0.05  # logistic slope of limit side choice, per tick of V - mid
+    depth_geometric_p: float = 0.50
     news_per_day: float = 4.0
     news_impact: float = 0.006  # fair value move for a sentiment score of 1, as a fraction of price
     news_horizon_s: float = 120.0  # the move is absorbed linearly over this window
@@ -110,7 +112,8 @@ def generate_day(
     news_index = 0
     end = OPEN_S + duration_s
     while True:
-        dt = rng.exponential(1.0 / profile.rate_per_s)
+        cancel_rate = params.cancel_rate * engine.order_count()
+        dt = rng.exponential(1.0 / (profile.rate_per_s + cancel_rate))
         t += dt
         if t >= end:
             break
@@ -125,8 +128,8 @@ def generate_day(
 
         bid, ask = engine.best_bid(), engine.best_ask()
         mid = (bid + ask) / 2 if bid is not None and ask is not None else fair
-        roll = rng.random()
-        if roll < params.p_limit:
+        roll = rng.random() * (profile.rate_per_s + cancel_rate)
+        if roll < profile.rate_per_s * params.limit_share:
             side = _engine.BUY if rng.random() < _sigmoid(params.limit_tilt * (fair - mid)) else _engine.SELL
             depth = int(rng.geometric(params.depth_geometric_p)) - 1
             if side == _engine.BUY:
@@ -140,8 +143,8 @@ def generate_day(
             engine.submit(next_id, side, _engine.LIMIT, max(price, 1), LOT * int(rng.geometric(0.45)), ts)
             live.append(next_id)
             next_id += 1
-        elif roll < params.p_limit + params.p_cancel:
-            for _ in range(6):
+        elif roll >= profile.rate_per_s:
+            for _ in range(20):
                 if not live:
                     break
                 pick = int(rng.integers(len(live)))
