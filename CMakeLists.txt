@@ -48,3 +48,4 @@ if(MICROPRICE_BUILD_BENCH)
 endif()
 
 add_subdirectory(engine)
+add_subdirectory(feed)
