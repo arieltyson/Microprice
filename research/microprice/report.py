@@ -116,7 +116,10 @@ def results() -> str:
             f"{sweep['parameter_sets']:,} parameter sets, {sweep['backtests']:,} backtests on Spark in "
             f"{sweep['seconds'] / 60:.0f} minutes. The selected set has a per-minute Sharpe ratio of "
             f"{sel['raw_sharpe_1min']:.3f} against an expected maximum of {sel['expected_max_sharpe_1min']:.3f} "
-            f"for {int(sel['trials']):,} unskilled trials; deflated Sharpe ratio {sel['deflated_sharpe']:.3f}.",
+            f"for {int(sel['trials']):,} unskilled trials; deflated Sharpe ratio {sel['deflated_sharpe']:.3f}. "
+            "The trial Sharpe ratios are spread widely because aggressive settings lose heavily, so the deflation "
+            "sets a bar no trial reached: one half-hour selection window cannot prove skill on its own, which is "
+            "why the comparison below uses untouched days.",
             "",
         ]
     if holdout:
@@ -130,7 +133,19 @@ def results() -> str:
                 f"| {name} | {money(s['pnl_usd'])} | {s['sharpe']:.2f} | {s['markout_10s']:.3f} | "
                 f"{int(s['fills']):,} | {money(s['max_drawdown_usd'])} |"
             )
-        lines += ["", f"Sharpe change from baseline to signal: {100 * holdout['sharpe_lift']:+.0f}%.", ""]
+        off, on = holdout["summary"]["signals_off"], holdout["summary"]["signal"]
+        lines += [
+            "",
+            "Switching the signals on, with every other parameter fixed, moves held-out P&L from "
+            f"{money(off['pnl_usd'])} to {money(on['pnl_usd'])} and the 10-second markout from "
+            f"{off['markout_10s']:+.3f} to {on['markout_10s']:+.3f} ticks per share: without the forecast the "
+            "strategy is picked off by informed flow, with it the fills move in its favour.",
+            "",
+            "The synthetic market is built so that order flow leans toward a latent fair value, which makes it "
+            "more predictable than a real one. The absolute P&L and Sharpe figures describe this simulation; "
+            "the comparison between strategies on the same days is the meaningful result.",
+            "",
+        ]
         lines += ["Annualizing intraday Sharpe ratios overstates what a full year would show; the figures are "
                   "for comparing strategies on the same days, not as a forecast.", ""]  # fmt: skip
     analysis = load("analysis/analysis.json")
