@@ -1,7 +1,7 @@
 """Distributed strategy parameter sweeps on Apache Spark.
 
 Each parameter set is scored on the selection day (day 3) for all ten
-symbols over the opening half hour, so 1,280 parameter sets make 12,800
+symbols over the opening half hour, so 10,240 parameter sets make 102,400
 backtests. Sessions are packed into .npz files once, and every
 Spark partition loads them a single time before running its share of the grid.
 The same function runs on a laptop with `local[*]` and on Amazon EMR.
@@ -13,7 +13,7 @@ import argparse
 import itertools
 import json
 import time
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
@@ -31,6 +31,9 @@ GRID: dict[str, list[Any]] = {
     "tau_s": [10.0, 30.0, 60.0, 120.0],
     "alpha": [0.0, 0.5, 1.0, 2.0],
     "beta": [0.0, 2.0, 5.0, 10.0],
+    "quote_lots": [1, 2],
+    "max_inventory_lots": [5, 10],
+    "latency_ms": [0.5, 5.0],
 }
 # Grid indices 09:30:01 to 10:00:00. Starting at the open means no run has to
 # replay earlier order flow before its first decision.
@@ -103,7 +106,7 @@ def evaluate(
     }
 
 
-def _partition(rows: Iterator[dict[str, Any]], session_paths: list[str]) -> Iterator[dict[str, Any]]:
+def _partition(rows: Iterable[dict[str, Any]], session_paths: list[str]) -> Iterator[dict[str, Any]]:
     sessions = [load_packed(Path(p)) for p in session_paths]
     for row in rows:
         yield evaluate(row, sessions)

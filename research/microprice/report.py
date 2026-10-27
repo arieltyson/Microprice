@@ -25,7 +25,9 @@ def load(name: str) -> Any:
 
 def machine() -> str:
     try:
-        cpu = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True).stdout
+        cpu = subprocess.run(
+            ["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True
+        ).stdout
     except OSError:
         cpu = ""
     cores = os.cpu_count()
@@ -43,7 +45,9 @@ def benchmarks() -> str:
         lines += ["## Matching engine (`make bench`)", "", "| Benchmark | Result |", "| --- | --- |"]
         for b in engine["benchmarks"]:
             if "orders_per_sec" in b:
-                lines.append(f"| Throughput, single thread | {b['orders_per_sec'] / 1e6:.1f}M orders per second |")
+                lines.append(
+                    f"| Throughput, single thread | {b['orders_per_sec'] / 1e6:.1f}M orders per second |"
+                )
                 lines.append(f"| Heap allocations per order | {b['allocs_per_order']:.0f} |")
             if "p99_ns" in b:
                 lines.append(f"| Latency per operation | p50 {b['p50_ns']:.0f} ns, p99 {b['p99_ns']:.0f} ns, "
@@ -83,7 +87,9 @@ def results() -> str:
         meta = json.loads(meta_path.read_text())
         line = f"{meta['rows']:,} headlines scored by FinBERT ({meta['source']} source)"
         if "finbert_sign_agreement" in meta:
-            line += f"; FinBERT's sign agrees with the human label on {100 * meta['finbert_sign_agreement']:.1f}%"
+            line += (
+                f"; FinBERT's sign agrees with the human label on {100 * meta['finbert_sign_agreement']:.1f}%"
+            )
         lines += [line + " of bullish and bearish headlines (`make headlines`).", ""]
 
     forecast = load("forecast.json")

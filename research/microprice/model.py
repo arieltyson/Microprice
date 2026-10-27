@@ -73,7 +73,8 @@ def usable(data: pd.DataFrame, horizon: int) -> pd.DataFrame:
         & data[f"fwd{horizon}"].notna()
         & data["mid"].notna()
     )
-    return data[ok].reset_index(drop=True)
+    frame: pd.DataFrame = data[ok].reset_index(drop=True)
+    return frame
 
 
 def subsample(frame: pd.DataFrame, rows: int = MAX_TRAIN_ROWS) -> pd.DataFrame:

@@ -22,8 +22,9 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from websockets.asyncio.server import Request, Response, ServerConnection, serve
+from websockets.asyncio.server import ServerConnection, serve
 from websockets.datastructures import Headers
+from websockets.http11 import Request, Response
 
 from microprice import _engine, backtest, sweep
 from microprice.engine import new_engine
@@ -60,7 +61,9 @@ def session_ticks(config: GatewayConfig) -> Iterator[dict[str, Any]]:
     )
     result = backtest.run(s.columns, s.grid_ns, s.mid, s.sigma2, s.forecast, s.sentiment, params)
     fills = result.fills
-    capture = np.cumsum(fills["side"] * fills["qty"] * (fills["mid"] - fills["price"])) if len(fills) else []
+    capture = np.cumsum(
+        (fills["side"] * fills["qty"] * (fills["mid"] - fills["price"])).to_numpy(dtype=float)
+    )
     fill_step = (
         np.searchsorted(s.grid_ns, fills["ts"].to_numpy(), side="left") if len(fills) else np.array([])
     )
@@ -92,7 +95,7 @@ def session_ticks(config: GatewayConfig) -> Iterator[dict[str, Any]]:
                     "qty": int(f["qty"]),
                 }
             )
-            spread_capture = float(capture.iloc[fill_index])
+            spread_capture = float(capture[fill_index])
             fill_index += 1
         bid_px, bid_sz = market.top_levels(_engine.BUY, LEVELS)
         ask_px, ask_sz = market.top_levels(_engine.SELL, LEVELS)

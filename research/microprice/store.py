@@ -135,7 +135,8 @@ class KdbStore:
             f" select from trade where date={day}, sym=`{symbol};"
             f" grid[`{symbol};{day};{step_s}]; {' '.join(str(h) for h in horizons)}]"
         )
-        return q(expr).pd()
+        frame: pd.DataFrame = q(expr).pd()
+        return frame
 
 
 def kdb_available() -> bool:

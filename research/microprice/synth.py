@@ -77,7 +77,7 @@ class FlowParams:
 
 
 def _sigmoid(x: float) -> float:
-    return 1.0 / (1.0 + np.exp(-x))
+    return float(1.0 / (1.0 + np.exp(-x)))
 
 
 def generate_day(
@@ -111,6 +111,8 @@ def generate_day(
 
     batches: list[dict[str, np.ndarray]] = []
     news_index = 0
+    news_time = news["time"].to_numpy(dtype=float)
+    news_sentiment = news["sentiment"].to_numpy(dtype=float)
     end = OPEN_S + duration_s
     while True:
         cancel_rate = params.cancel_rate * engine.order_count()
@@ -119,10 +121,11 @@ def generate_day(
         if t >= end:
             break
         ts = int(t * 1e9)
-        while news_index < len(news) and news["time"].iat[news_index] <= t:
-            move = news["sentiment"].iat[news_index] * params.news_impact * fair
+        while news_index < len(news_time) and news_time[news_index] <= t:
+            published = float(news_time[news_index])
+            move = float(news_sentiment[news_index]) * params.news_impact * fair
             news_drift = np.append(news_drift, move / params.news_horizon_s)
-            news_until = np.append(news_until, news["time"].iat[news_index] + params.news_horizon_s)
+            news_until = np.append(news_until, published + params.news_horizon_s)
             news_index += 1
         active = news_until > t
         fair += sigma * np.sqrt(dt) * rng.standard_normal() + float(news_drift[active].sum()) * dt
@@ -155,10 +158,9 @@ def generate_day(
                     live[pick] = live[-1]
                     live.pop()
                     continue
-                if remaining > LOT and rng.random() < 0.2:
-                    engine.modify(
-                        order_id, engine.order_price(order_id), remaining // (2 * LOT) * LOT or LOT, ts
-                    )
+                resting_price = engine.order_price(order_id)
+                if remaining > LOT and resting_price is not None and rng.random() < 0.2:
+                    engine.modify(order_id, resting_price, remaining // (2 * LOT) * LOT or LOT, ts)
                 else:
                     engine.cancel(order_id, ts)
                     live[pick] = live[-1]

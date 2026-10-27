@@ -32,7 +32,7 @@ def choose(results: pd.DataFrame) -> tuple[dict[str, Any], dict[str, Any]]:
     best = results.sort_values("sharpe_1min", ascending=False).iloc[0].to_dict()
     no_signal = results[(results["alpha"] == 0) & (results["beta"] == 0)]
     baseline = no_signal.sort_values("sharpe_1min", ascending=False).iloc[0].to_dict()
-    return baseline, best
+    return {str(k): v for k, v in baseline.items()}, {str(k): v for k, v in best.items()}
 
 
 def deflate(results: pd.DataFrame, best: dict[str, Any], packed: list[Path]) -> dict[str, float]:
@@ -135,6 +135,11 @@ def run_holdout(data_root: Path, table: pd.DataFrame, booster: Any, variants: di
     return sessions, summary_by_variant
 
 
+def clean(row: dict[Any, Any]) -> dict[str, Any]:
+    """Converts numpy scalars to plain Python values for JSON."""
+    return {str(k): (v.item() if hasattr(v, "item") else v) for k, v in row.items()}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Held-out evaluation of the selected strategies.")
     parser.add_argument("--data", type=Path, default=Path("../data/synthetic"))
@@ -160,7 +165,6 @@ def main() -> None:
     variants = {"baseline": baseline, "signal": signal, "signal_optimized": optimized}
     sessions, summary = run_holdout(args.data, table, booster, variants, args.out / "holdout_fills.csv")
     lift = (summary["signal"]["sharpe"] - summary["baseline"]["sharpe"]) / abs(summary["baseline"]["sharpe"])
-    clean = lambda row: {k: (v.item() if hasattr(v, "item") else v) for k, v in row.items()}  # noqa: E731
     holdout = {
         "holdout_days": HOLDOUT_DAYS,
         "params": {k: clean(v) for k, v in variants.items()},
