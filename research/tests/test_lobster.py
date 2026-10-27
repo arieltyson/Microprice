@@ -29,6 +29,12 @@ def test_messages_round_trip(tmp_path: Path) -> None:
 
 def test_orderbook_columns_follow_lobster_order() -> None:
     assert lobster.orderbook_columns(2) == [
-        "ask_price_1", "ask_size_1", "bid_price_1", "bid_size_1",
-        "ask_price_2", "ask_size_2", "bid_price_2", "bid_size_2",
+        "ask_price_1",
+        "ask_size_1",
+        "bid_price_1",
+        "bid_size_1",
+        "ask_price_2",
+        "ask_size_2",
+        "bid_price_2",
+        "bid_size_2",
     ]

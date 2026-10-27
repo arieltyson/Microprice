@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from microprice import _engine, lobster
+from microprice.engine import new_engine
 
 OPEN_S = 34_200.0  # 09:30:00
 CLOSE_S = 57_600.0  # 16:00:00
@@ -90,7 +91,7 @@ def generate_day(
     """Returns (LOBSTER messages, news events) for one symbol and day."""
     params = params or FlowParams()
     rng = np.random.default_rng(seed)
-    engine = _engine.Engine(1, 10_000_000, 1 << 21)
+    engine = new_engine()
     fair = profile.price_usd / TICK_USD
     sigma = profile.price_usd * profile.daily_vol / np.sqrt(CLOSE_S - OPEN_S) / TICK_USD  # ticks per sqrt(s)
 
@@ -155,14 +156,18 @@ def generate_day(
                     live.pop()
                     continue
                 if remaining > LOT and rng.random() < 0.2:
-                    engine.modify(order_id, engine.order_price(order_id), remaining // (2 * LOT) * LOT or LOT, ts)
+                    engine.modify(
+                        order_id, engine.order_price(order_id), remaining // (2 * LOT) * LOT or LOT, ts
+                    )
                 else:
                     engine.cancel(order_id, ts)
                     live[pick] = live[-1]
                     live.pop()
                 break
         else:
-            side = _engine.BUY if rng.random() < _sigmoid(params.informed_kappa * (fair - mid)) else _engine.SELL
+            side = (
+                _engine.BUY if rng.random() < _sigmoid(params.informed_kappa * (fair - mid)) else _engine.SELL
+            )
             if (side == _engine.BUY and ask is not None) or (side == _engine.SELL and bid is not None):
                 engine.submit(next_id, side, _engine.MARKET, 0, LOT * int(rng.geometric(0.55)), ts)
                 next_id += 1
@@ -213,11 +218,13 @@ def _events_to_messages(batches: list[dict[str, np.ndarray]]) -> pd.DataFrame:
 
 def top_of_book(messages: pd.DataFrame) -> pd.DataFrame:
     columns = lobster.to_columns(messages)
-    engine = _engine.Engine(1, 10_000_000, 1 << 21)
+    engine = new_engine()
     ask_px, ask_sz, bid_px, bid_sz = engine.replay_top_of_book(
         columns.ts, columns.type, columns.order_id, columns.size, columns.price, columns.direction
     )
-    return pd.DataFrame({"ask_price_1": ask_px, "ask_size_1": ask_sz, "bid_price_1": bid_px, "bid_size_1": bid_sz})
+    return pd.DataFrame(
+        {"ask_price_1": ask_px, "ask_size_1": ask_sz, "bid_price_1": bid_px, "bid_size_1": bid_sz}
+    )
 
 
 def _generate_one(task: tuple[SymbolProfile, str, int, Path, Path | None]) -> dict[str, object]:
@@ -227,7 +234,13 @@ def _generate_one(task: tuple[SymbolProfile, str, int, Path, Path | None]) -> di
     lobster.write_messages(messages, lobster.message_file(out, profile.symbol, date))
     lobster.write_orderbook(top_of_book(messages), lobster.orderbook_file(out, profile.symbol, date))
     news.to_csv(out / profile.symbol / f"{profile.symbol}_{date}_news.csv", index=False)
-    return {"symbol": profile.symbol, "date": date, "seed": seed, "messages": len(messages), "news": len(news)}
+    return {
+        "symbol": profile.symbol,
+        "date": date,
+        "seed": seed,
+        "messages": len(messages),
+        "news": len(news),
+    }
 
 
 def main() -> None:

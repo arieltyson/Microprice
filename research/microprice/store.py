@@ -30,8 +30,12 @@ def quote_trade_tables(
             "time": time,
             "sym": symbol,
             # An empty side is null rather than LOBSTER's sentinel price.
-            "bid": (orderbook["bid_price_1"] // lobster.LOBSTER_PRICE_PER_TICK).where(orderbook["bid_size_1"] > 0),
-            "ask": (orderbook["ask_price_1"] // lobster.LOBSTER_PRICE_PER_TICK).where(orderbook["ask_size_1"] > 0),
+            "bid": (orderbook["bid_price_1"] // lobster.LOBSTER_PRICE_PER_TICK).where(
+                orderbook["bid_size_1"] > 0
+            ),
+            "ask": (orderbook["ask_price_1"] // lobster.LOBSTER_PRICE_PER_TICK).where(
+                orderbook["ask_size_1"] > 0
+            ),
             "bsize": orderbook["bid_size_1"].to_numpy(),
             "asize": orderbook["ask_size_1"].to_numpy(),
         }
@@ -77,7 +81,9 @@ def ofi(quote: pd.DataFrame) -> pd.DataFrame:
 
 def trades_with_quotes(trade: pd.DataFrame, quote: pd.DataFrame) -> pd.DataFrame:
     """Attaches the last quote strictly before each trade (q: aj on time-1)."""
-    left = trade.assign(qtime=(trade["time"] - pd.Timedelta(1, "ns")).astype("datetime64[ns]")).sort_values("qtime")
+    left = trade.assign(qtime=(trade["time"] - pd.Timedelta(1, "ns")).astype("datetime64[ns]")).sort_values(
+        "qtime"
+    )
     right = quote[["sym", "time", "bid", "ask", "bsize", "asize"]].rename(columns={"time": "qtime"})
     right["qtime"] = right["qtime"].astype("datetime64[ns]")
     merged = pd.merge_asof(left, right.sort_values("qtime"), on="qtime", by="sym", direction="backward")
@@ -110,14 +116,15 @@ class KdbStore:
         import pykx as kx  # imported lazily: optional dependency
 
         self._kx = kx
-        kx.q(f'\\l {REPO_ROOT / "tickstore" / "schema.q"}')
-        kx.q(f'\\l {REPO_ROOT / "tickstore" / "analytics.q"}')
+        kx.q(f"\\l {REPO_ROOT / 'tickstore' / 'schema.q'}")
+        kx.q(f"\\l {REPO_ROOT / 'tickstore' / 'analytics.q'}")
         kx.q(f"\\l {hdb}")
 
     def tables(self, symbol: str, date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         q = self._kx.q
-        quote = q(f"select time, sym, bid, ask, bsize, asize from quote where date={date.replace('-', '.')}, sym=`{symbol}")
-        trade = q(f"select time, sym, price, size, side from trade where date={date.replace('-', '.')}, sym=`{symbol}")
+        where = f"date={date.replace('-', '.')}, sym=`{symbol}"
+        quote = q(f"select time, sym, bid, ask, bsize, asize from quote where {where}")
+        trade = q(f"select time, sym, price, size, side from trade where {where}")
         return quote.pd(), trade.pd()
 
     def features(self, symbol: str, date: str, step_s: float, horizons: list[int]) -> pd.DataFrame:

@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from microprice import _engine, lobster, synth
+from microprice import lobster, synth
+from microprice.engine import new_engine
 
 
 def _day(seed: int = 3) -> pd.DataFrame:
@@ -16,10 +17,16 @@ def test_generation_is_deterministic_for_a_seed() -> None:
 def test_messages_replay_to_the_same_event_stream() -> None:
     messages = _day()
     columns = lobster.to_columns(messages)
-    engine = _engine.Engine(1, 10_000_000, 1 << 21)
+    engine = new_engine()
     engine.apply_lobster(
-        columns.ts, columns.type, columns.order_id, columns.size, columns.price, columns.direction,
-        0, len(columns),
+        columns.ts,
+        columns.type,
+        columns.order_id,
+        columns.size,
+        columns.price,
+        columns.direction,
+        0,
+        len(columns),
     )
     replayed = synth._events_to_messages([engine.drain_events()])
     pd.testing.assert_frame_equal(replayed, messages)

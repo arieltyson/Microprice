@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from microprice import _engine, lobster
+from microprice.engine import new_engine
 from microprice.store import LobsterStore, ofi, with_micro
 
 OPEN = pd.Timedelta(hours=9, minutes=30)
@@ -40,7 +41,9 @@ def sample_at(g: pd.DataFrame, table: pd.DataFrame, columns: Sequence[str], shif
     return joined[list(columns)].reset_index(drop=True)
 
 
-def l1_features(quote: pd.DataFrame, trade: pd.DataFrame, g: pd.DataFrame, horizons: Sequence[int]) -> pd.DataFrame:
+def l1_features(
+    quote: pd.DataFrame, trade: pd.DataFrame, g: pd.DataFrame, horizons: Sequence[int]
+) -> pd.DataFrame:
     qq = ofi(with_micro(quote.sort_values(["sym", "time"], kind="stable")))
     qq["cofi"] = qq.groupby("sym")["e"].cumsum()
     tv = trade.sort_values(["sym", "time"], kind="stable").copy()
@@ -54,7 +57,9 @@ def l1_features(quote: pd.DataFrame, trade: pd.DataFrame, g: pd.DataFrame, horiz
     f["mid"] = now["mid"]
     f["ofi1"] = now["cofi"] - sample_at(g, qq, ["cofi"], -1)["cofi"]
     f["ofi10"] = now["cofi"] - sample_at(g, qq, ["cofi"], -10)["cofi"]
-    f["tradeImb10"] = (sample_at(g, tv, ["csv"], 0)["csv"] - sample_at(g, tv, ["csv"], -10)["csv"]).fillna(0.0)
+    f["tradeImb10"] = (sample_at(g, tv, ["csv"], 0)["csv"] - sample_at(g, tv, ["csv"], -10)["csv"]).fillna(
+        0.0
+    )
     f["ret10"] = f["mid"] - sample_at(g, qq, ["mid"], -10)["mid"]
     f["rv60"] = f["mid"].diff().fillna(0.0).rolling(60, min_periods=1).std(ddof=0)
     for h in horizons:
@@ -64,8 +69,10 @@ def l1_features(quote: pd.DataFrame, trade: pd.DataFrame, g: pd.DataFrame, horiz
 
 def depth_features(messages: pd.DataFrame, g: pd.DataFrame, levels: int = DEPTH_LEVELS) -> pd.DataFrame:
     columns = lobster.to_columns(messages)
-    engine = _engine.Engine(1, 10_000_000, 1 << 21)
-    grid_ns = (g["time"] - g["time"].dt.normalize()).dt.total_seconds().mul(1e9).round().astype(np.int64).to_numpy()
+    engine = new_engine()
+    grid_ns = (
+        (g["time"] - g["time"].dt.normalize()).dt.total_seconds().mul(1e9).round().astype(np.int64).to_numpy()
+    )
     cut = np.searchsorted(columns.ts, grid_ns, side="right")
     imbalance = np.full(len(g), np.nan)
     weighted = np.full(len(g), np.nan)
@@ -74,7 +81,14 @@ def depth_features(messages: pd.DataFrame, g: pd.DataFrame, levels: int = DEPTH_
     for i, end in enumerate(cut):
         if end > done:
             engine.apply_lobster(
-                columns.ts, columns.type, columns.order_id, columns.size, columns.price, columns.direction, done, end
+                columns.ts,
+                columns.type,
+                columns.order_id,
+                columns.size,
+                columns.price,
+                columns.direction,
+                done,
+                end,
             )
             engine.drain_events()
             done = int(end)
@@ -117,6 +131,15 @@ def build_features(
 
 
 FEATURE_COLUMNS = [
-    "spread", "imb", "microDev", "ofi1", "ofi10", "tradeImb10", "ret10", "rv60",
-    "depthImb5", "depthImbW5", "sentiment",
+    "spread",
+    "imb",
+    "microDev",
+    "ofi1",
+    "ofi10",
+    "tradeImb10",
+    "ret10",
+    "rv60",
+    "depthImb5",
+    "depthImbW5",
+    "sentiment",
 ]

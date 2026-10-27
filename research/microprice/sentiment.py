@@ -89,7 +89,9 @@ def fetch_headlines(client: SecClient, symbols: Iterable[str], per_symbol: int =
     headlines: list[Headline] = []
     for symbol in symbols:
         cik = ciks[symbol.upper()]
-        recent = client.get(f"https://data.sec.gov/submissions/CIK{cik:010d}.json").json()["filings"]["recent"]
+        recent = client.get(f"https://data.sec.gov/submissions/CIK{cik:010d}.json").json()["filings"][
+            "recent"
+        ]
         found = 0
         for form, accession, accepted in zip(
             recent["form"], recent["accessionNumber"], recent["acceptanceDateTime"], strict=True
@@ -128,7 +130,9 @@ class FinBert:
         with torch.no_grad():
             for start in range(0, len(texts), batch_size):
                 batch = list(texts[start : start + batch_size])
-                tokens = self._tokenizer(batch, padding=True, truncation=True, max_length=128, return_tensors="pt")
+                tokens = self._tokenizer(
+                    batch, padding=True, truncation=True, max_length=128, return_tensors="pt"
+                )
                 probabilities = torch.softmax(self._model(**tokens).logits, dim=-1)
                 scores += (probabilities[:, self._positive] - probabilities[:, self._negative]).tolist()
         return np.asarray(scores, dtype=np.float64)
@@ -157,7 +161,9 @@ def fetch_open_headlines(symbols: Sequence[str]) -> pd.DataFrame:
                 continue
             match = next((t for t in tickers if t in wanted), None)
             symbol = "META" if match == "FB" else (match or "*")
-            rows.append({"symbol": symbol, "headline": body, "label": OPEN_LABEL_SIGN[int(label)], "source": split})
+            rows.append(
+                {"symbol": symbol, "headline": body, "label": OPEN_LABEL_SIGN[int(label)], "source": split}
+            )
     return pd.DataFrame(rows).drop_duplicates("headline").reset_index(drop=True)
 
 

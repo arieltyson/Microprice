@@ -22,6 +22,8 @@ def test_sec_client_requires_contact_email() -> None:
 
 
 def test_tweet_headline_is_split_into_tickers_and_text() -> None:
-    tickers, body = sentiment.clean_tweet_headline("$AAPL $MSFT - Apple, Microsoft lift guidance https://t.co/x")
+    tickers, body = sentiment.clean_tweet_headline(
+        "$AAPL $MSFT - Apple, Microsoft lift guidance https://t.co/x"
+    )
     assert tickers == ["AAPL", "MSFT"]
     assert body == "Apple, Microsoft lift guidance"
