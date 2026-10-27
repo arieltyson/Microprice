@@ -1,0 +1,26 @@
+# Builds the C++ engine module and runs the WebSocket gateway.
+FROM python:3.12-slim-bookworm AS build
+RUN apt-get update && apt-get install -y --no-install-recommends cmake g++ make git && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
+WORKDIR /src
+COPY CMakeLists.txt ./
+COPY engine engine
+COPY feed feed
+COPY research/pyproject.toml research/uv.lock research/
+RUN cd research && uv sync --frozen --no-dev
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMICROPRICE_BUILD_TESTS=OFF -DMICROPRICE_BUILD_BENCH=OFF \
+      -DPython_EXECUTABLE=/src/research/.venv/bin/python \
+ && cmake --build build -j 4 --target _engine
+COPY research/microprice research/microprice
+
+FROM python:3.12-slim-bookworm
+RUN useradd --create-home microprice
+WORKDIR /app/research
+COPY --from=build /src/research /app/research
+ENV PATH="/app/research/.venv/bin:$PATH"
+USER microprice
+EXPOSE 8765
+# results/, data/ and models/ are mounted read-only at run time; nothing is baked into the image.
+CMD ["python", "-m", "microprice.gateway", "--host", "0.0.0.0", "--results", "/app/results", \
+     "--data", "/app/data/synthetic", "--features", "/app/data/features/features.parquet", \
+     "--model", "/app/research/models/lgbm_fwd10.txt"]

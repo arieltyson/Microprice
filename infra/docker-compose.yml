@@ -1,0 +1,21 @@
+# Local stack: the gateway streams a held-out replay and the dashboard serves the UI.
+# Run `make results` first so results/, data/ and the model exist.
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.gateway
+    volumes:
+      - ../results:/app/results:ro
+      - ../data:/app/data:ro
+      - ../research/models:/app/research/models:ro
+    expose:
+      - "8765"
+  dashboard:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.dashboard
+    depends_on:
+      - gateway
+    ports:
+      - "8080:80"
