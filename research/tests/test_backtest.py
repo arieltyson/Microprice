@@ -32,7 +32,9 @@ def session(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     "params",
     [
         backtest.StrategyParams(),
-        backtest.StrategyParams(gamma=0.02, kappa=0.5, alpha=1.0, beta=3.0, latency_ms=5.0, max_inventory_lots=3),
+        backtest.StrategyParams(
+            gamma=0.02, kappa=0.5, alpha=1.0, beta=3.0, latency_ms=5.0, max_inventory_lots=3
+        ),
     ],
 )
 def test_cpp_strategy_matches_python_reference(session: dict, params: backtest.StrategyParams) -> None:

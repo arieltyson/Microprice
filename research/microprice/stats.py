@@ -23,12 +23,12 @@ def expected_max_sharpe(trial_sharpes: npt.NDArray[np.float64]) -> float:
     if n < 2:
         return 0.0
     sd = float(np.std(trial_sharpes, ddof=1))
-    return sd * (
-        (1 - EULER_GAMMA) * norm.ppf(1 - 1.0 / n) + EULER_GAMMA * norm.ppf(1 - 1.0 / (n * math.e))
-    )
+    return sd * ((1 - EULER_GAMMA) * norm.ppf(1 - 1.0 / n) + EULER_GAMMA * norm.ppf(1 - 1.0 / (n * math.e)))
 
 
-def probabilistic_sharpe(observed: float, benchmark: float, n_obs: int, skewness: float, kurt: float) -> float:
+def probabilistic_sharpe(
+    observed: float, benchmark: float, n_obs: int, skewness: float, kurt: float
+) -> float:
     """P(true Sharpe > benchmark) given a per-period Sharpe estimate and its moments."""
     denominator = math.sqrt(max(1e-12, 1 - skewness * observed + (kurt - 1) / 4 * observed**2))
     return float(norm.cdf((observed - benchmark) * math.sqrt(n_obs - 1) / denominator))
