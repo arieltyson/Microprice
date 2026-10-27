@@ -5,7 +5,9 @@ best parameter set overall, the baseline is the best set with both signal
 weights at zero. Both then run on every symbol for the held-out days, which no
 earlier step has seen. Outputs:
 
-* results/holdout.json        per-session metrics and the portfolio comparison
+* results/holdout.json        per-session metrics and the portfolio comparison; the
+                              Sharpe lift compares the selected strategy with the
+                              same parameters and its signals switched off
 * results/holdout_fills.csv   every fill with its signals and later mids (for R)
 * results/sweep_top.json      top sweep rows with deflated Sharpe ratios
 """
@@ -162,9 +164,18 @@ def main() -> None:
         **signal,
         "limits_by_symbol": {s: {"max_inventory_lots": n} for s, n in allocation["limits_lots"].items()},
     }
-    variants = {"baseline": baseline, "signal": signal, "signal_optimized": optimized}
+    # The ablation keeps every parameter of the selected strategy but turns the
+    # signals off, so the comparison isolates what the forecast and sentiment add.
+    ablation = {**signal, "alpha": 0.0, "beta": 0.0}
+    variants = {
+        "baseline": baseline,
+        "signals_off": ablation,
+        "signal": signal,
+        "signal_optimized": optimized,
+    }
     sessions, summary = run_holdout(args.data, table, booster, variants, args.out / "holdout_fills.csv")
-    lift = (summary["signal"]["sharpe"] - summary["baseline"]["sharpe"]) / abs(summary["baseline"]["sharpe"])
+    off, on = summary["signals_off"], summary["signal"]
+    lift = (on["sharpe"] - off["sharpe"]) / abs(off["sharpe"]) if off["sharpe"] else float("nan")
     holdout = {
         "holdout_days": HOLDOUT_DAYS,
         "params": {k: clean(v) for k, v in variants.items()},
