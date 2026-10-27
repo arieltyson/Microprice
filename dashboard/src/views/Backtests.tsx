@@ -34,7 +34,7 @@ interface Holdout {
   summary: Record<string, SummaryMetrics>;
 }
 
-const num = (v: unknown) => formatRatio(Number(v));
+const num = (v: unknown) => (v == null ? "n/a" : formatRatio(Number(v)));
 
 export function Backtests() {
   const result = useJson<Holdout>(endpoints.backtests, (d) => !d.sessions?.length);

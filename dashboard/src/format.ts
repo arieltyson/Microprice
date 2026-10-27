@@ -7,6 +7,9 @@ const plain = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const ratio = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, signDisplay: "exceptZero" });
 const time = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" });
 
+const decimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+/** A parameter value: no sign, up to two decimals. */
+export const formatDecimal = (value: number): string => decimal.format(value);
 /** Ticks of 0.01 USD to a signed dollar amount. */
 export const formatUsdFromTicks = (ticks: number): string => usd.format(ticks / 100).replace("-", "−");
 /** A price in ticks to dollars and cents. */

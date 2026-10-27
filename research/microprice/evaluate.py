@@ -137,6 +137,19 @@ def run_holdout(data_root: Path, table: pd.DataFrame, booster: Any, variants: di
     return sessions, summary_by_variant
 
 
+def json_safe(value: Any) -> Any:
+    """Replaces NaN and infinities with None: browsers reject NaN in JSON."""
+    if isinstance(value, dict):
+        return {str(k): json_safe(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [json_safe(v) for v in value]
+    if hasattr(value, "item"):
+        value = value.item()
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
 def clean(row: dict[Any, Any]) -> dict[str, Any]:
     """Converts numpy scalars to plain Python values for JSON."""
     return {str(k): (v.item() if hasattr(v, "item") else v) for k, v in row.items()}
@@ -185,7 +198,7 @@ def main() -> None:
         "sharpe_lift": lift,
         "sessions": sessions,
     }
-    (args.out / "holdout.json").write_text(json.dumps(holdout, indent=2, default=float))
+    (args.out / "holdout.json").write_text(json.dumps(json_safe(holdout), indent=2, allow_nan=False))
 
     trials = results["sharpe_1min"].to_numpy(dtype=float)
     benchmark = stats.expected_max_sharpe(trials)
@@ -195,13 +208,13 @@ def main() -> None:
         stats.probabilistic_sharpe(s, benchmark, 30, 0.0, 3.0) for s in top["sharpe_1min"]
     ]
     sweep_meta = json.loads(args.sweep.with_suffix(".json").read_text())
-    (args.out / "sweep_top.json").write_text(json.dumps({
+    (args.out / "sweep_top.json").write_text(json.dumps(json_safe({
         "parameter_sets": sweep_meta["parameter_sets"],
         "backtests": sweep_meta["backtests"],
         "best_raw_sharpe": deflation["raw_sharpe_1min"],
         "best_deflated_sharpe": deflation["deflated_sharpe"],
         "top": [clean(r) for r in top.to_dict(orient="records")],
-    }, indent=2, default=float))  # fmt: skip
+    }), indent=2, allow_nan=False))  # fmt: skip
     print(
         json.dumps({"summary": summary, "sharpe_lift": lift, "selection": deflation}, indent=2, default=float)
     )

@@ -39,7 +39,9 @@ export function ChartFigure({ title, summary, times, series, format, formatTime,
     const options: uPlot.Options = {
       width: element.clientWidth || 600,
       height: 220,
-      legend: { show: true },
+      // Series names only: hover values live in the data table, and an idle legend
+      // would otherwise read "no data".
+      legend: { show: true, live: false },
       cursor: { drag: { x: false, y: false } },
       scales: { x: { time: false } },
       axes: [
