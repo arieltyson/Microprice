@@ -109,6 +109,19 @@ TEST_F(OrderBookTest, ReportsBookFullWithoutAllocating) {
   EXPECT_EQ(small.submit({3, Side::Buy, OrderType::Limit, 5, 1, 0}), Status::BookFull);
 }
 
+TEST(OrderBookWideRangeTest, EmptyingASideDoesNotScanTheWholeRange) {
+  CountingSink sink;
+  OrderBook<CountingSink> wide{BookConfig{1, 2'000'000, 1024}, sink};
+  for (int round = 0; round < 10'000; ++round) {
+    const auto id = static_cast<OrderId>(round + 1);
+    ASSERT_EQ(wide.submit({id, Side::Buy, OrderType::Limit, 1'000'000, 1, round}), Status::Ok);
+    ASSERT_EQ(wide.cancel(id, round), Status::Ok);
+    std::array<LevelView, 5> levels{};
+    ASSERT_EQ(wide.top_levels(Side::Buy, levels), 0u);
+  }
+  EXPECT_FALSE(wide.best_bid().has_value());
+}
+
 TEST_F(OrderBookTest, ReportsRestingOrderPrice) {
   limit(1, Side::Sell, 105, 5);
   EXPECT_EQ(book.order_price(1), 105);

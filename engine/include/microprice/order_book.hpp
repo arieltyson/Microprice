@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -125,16 +126,22 @@ class OrderBook {
   // Writes up to out.size() levels from the touch outward and returns how many.
   std::size_t top_levels(Side side, std::span<LevelView> out) const noexcept {
     std::size_t written = 0;
+    // Stops once every resting order on the side has been seen, so a thin
+    // book never scans the empty price range beyond its last level.
+    std::uint32_t seen = 0;
+    const std::uint32_t total = side_orders_[static_cast<std::size_t>(side)];
     if (side == Side::Buy) {
-      for (std::int64_t i = best_bid_; i >= 0 && written < out.size(); --i) {
+      for (std::int64_t i = best_bid_; i >= 0 && written < out.size() && seen < total; --i) {
         if (levels_[static_cast<std::size_t>(i)].orders > 0) {
           out[written++] = view(i);
+          seen += levels_[static_cast<std::size_t>(i)].orders;
         }
       }
     } else {
-      for (std::int64_t i = best_ask_; i < level_count() && written < out.size(); ++i) {
+      for (std::int64_t i = best_ask_; i < level_count() && written < out.size() && seen < total; ++i) {
         if (levels_[static_cast<std::size_t>(i)].orders > 0) {
           out[written++] = view(i);
+          seen += levels_[static_cast<std::size_t>(i)].orders;
         }
       }
     }
@@ -247,6 +254,7 @@ class OrderBook {
     level.tail = index;
     level.qty += qty;
     ++level.orders;
+    ++side_orders_[static_cast<std::size_t>(request.side)];
     ids_.insert(request.id, index);
     const auto signed_at = static_cast<std::int64_t>(at);
     if (request.side == Side::Buy) {
@@ -276,11 +284,19 @@ class OrderBook {
     }
     level.qty -= node.qty;
     --level.orders;
+    --side_orders_[static_cast<std::size_t>(node.side)];
     ids_.erase(node.id);
     pool_.release(index);
     if (level.orders == 0) {
       const auto signed_at = static_cast<std::int64_t>(at);
-      if (node.side == Side::Buy && signed_at == best_bid_) {
+      // An empty side resets the touch directly instead of scanning every level.
+      if (side_orders_[static_cast<std::size_t>(node.side)] == 0) {
+        if (node.side == Side::Buy) {
+          best_bid_ = -1;
+        } else {
+          best_ask_ = level_count();
+        }
+      } else if (node.side == Side::Buy && signed_at == best_bid_) {
         while (best_bid_ >= 0 && levels_[static_cast<std::size_t>(best_bid_)].orders == 0) {
           --best_bid_;
         }
@@ -299,6 +315,7 @@ class OrderBook {
   OrderPool pool_;
   IdMap ids_;
   Sink& sink_;
+  std::array<std::uint32_t, 2> side_orders_{};
   std::int64_t best_bid_ = -1;
   std::int64_t best_ask_ = std::numeric_limits<std::int64_t>::max();
 };
