@@ -13,3 +13,19 @@ LOBSTER sample files are distributed by request rather than as a public download
 ## 2026-10-26: kdb+ with a Python fallback
 
 The tick store is written in q. kdb+ needs a license file that cannot be provisioned in CI, so every q analytic has a pandas reference implementation with the same name and output schema. Tests run the pandas path everywhere and compare against q when a q binary is on the PATH.
+
+## 2026-10-27: Sweep scored on the opening half hour
+
+Each of the 10,240 parameter sets is scored on all ten symbols over 09:30 to 10:00 of the selection day. Starting at the open means no run replays earlier order flow before its first decision, which keeps 102,400 backtests to about 15 minutes on one machine.
+
+## 2026-10-27: Signal value measured by ablation
+
+The best parameter set without signals barely trades, so comparing against it says little. The held-out comparison instead runs the selected strategy with its forecast and sentiment weights set to zero, which isolates what the signals add. Percentage Sharpe changes are not reported because the ablated Sharpe ratio is negative.
+
+## 2026-10-27: Strategy loop in C++
+
+The backtest loop moved from Python to C++ (`market_maker.hpp`) because the sweep needs about 100,000 runs. The Python loop remains as `backtest.run_reference`, and a test requires both to produce identical fills.
+
+## 2026-10-27: Cloud paths not exercised
+
+The Terraform in `infra/aws` and the EMR script in `infra/emr` were written but not applied, because no AWS account is connected to this project. The sweep entry point they call (`sweeps/run_sweep.py`) runs locally under `spark-submit`.
