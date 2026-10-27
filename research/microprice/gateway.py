@@ -148,7 +148,7 @@ def make_server(config: GatewayConfig):  # type: ignore[no-untyped-def]
 async def run(config: GatewayConfig, host: str, port: int) -> None:
     process_request, handler = make_server(config)
     async with serve(handler, host, port, process_request=process_request) as server:
-        print(f"gateway listening on http://{host}:{port}")
+        print(f"gateway listening on http://{host}:{port}", flush=True)
         await server.serve_forever()
 
 
