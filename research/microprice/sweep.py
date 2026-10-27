@@ -112,8 +112,11 @@ def _partition(rows: Iterator[dict[str, Any]], session_paths: list[str]) -> Iter
 def run_spark(session_paths: list[Path], master: str, partitions: int, limit: int | None) -> pd.DataFrame:
     from pyspark.sql import SparkSession
 
+    builder = SparkSession.builder.appName("microprice-sweep")
+    if master:  # empty under spark-submit, which supplies the cluster master
+        builder = builder.master(master)
     spark = (
-        SparkSession.builder.master(master).appName("microprice-sweep")
+        builder
         .config("spark.driver.memory", "4g").config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
     )  # fmt: skip
