@@ -73,8 +73,9 @@ def load_packed(path: Path) -> SessionInputs:
 
 
 def strategy_params(row: dict[str, Any]) -> backtest.StrategyParams:
-    names = {f.name for f in fields(backtest.StrategyParams)}
-    return backtest.StrategyParams(**{k: v for k, v in row.items() if k in names})
+    # Rows read back from Parquet carry numpy floats; cast to each field's declared type.
+    types = {f.name: int if f.type in (int, "int") else float for f in fields(backtest.StrategyParams)}
+    return backtest.StrategyParams(**{k: types[k](v) for k, v in row.items() if k in types})
 
 
 def evaluate(
