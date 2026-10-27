@@ -6,7 +6,7 @@ JOBS ?= 8
 SEC_USER_AGENT ?=
 
 .PHONY: all build test check bench bench-feed data headlines features forecast sweep evaluate analysis \
-        results gateway dashboard up clean clean-data
+        results gateway dashboard demo up clean clean-data
 
 all: build
 
@@ -60,6 +60,11 @@ gateway:
 
 dashboard:
 	cd dashboard && npm run dev
+
+# Static dashboard with recorded data, for hosting without the gateway (dashboard/dist).
+demo:
+	$(PY) python -m microprice.demo
+	cd dashboard && VITE_DEMO=true npx vite build
 
 up:
 	docker compose -f infra/docker-compose.yml up --build

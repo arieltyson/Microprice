@@ -1,5 +1,6 @@
 import { EmptyState } from "../components/EmptyState";
 import { Panel } from "../components/Panel";
+import { endpoints } from "../config";
 import { copy } from "../copy";
 import { formatCount, formatRatio, formatUsdFromTicks } from "../format";
 import { SortableTable } from "./SortableTable";
@@ -36,7 +37,7 @@ interface Holdout {
 const num = (v: unknown) => formatRatio(Number(v));
 
 export function Backtests() {
-  const result = useJson<Holdout>("/api/backtests", (d) => !d.sessions?.length);
+  const result = useJson<Holdout>(endpoints.backtests, (d) => !d.sessions?.length);
   if (result.state === "loading") return <Panel title="Held-out backtests"><p role="status">Loading results.</p></Panel>;
   if (result.state === "error") return <Panel title="Held-out backtests"><EmptyState message={copy.backtests.error} /></Panel>;
   if (result.state === "empty") return <Panel title="Held-out backtests"><EmptyState message={copy.backtests.empty} /></Panel>;

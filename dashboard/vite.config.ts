@@ -5,6 +5,8 @@ import { defineConfig } from "vite";
 const gateway = process.env.MICROPRICE_GATEWAY ?? "http://127.0.0.1:8765";
 
 export default defineConfig({
+  // Hosted demo builds may live under a sub-path, such as /Microprice/ on GitHub Pages.
+  base: process.env.VITE_BASE ?? "/",
   plugins: [react()],
   server: {
     proxy: {

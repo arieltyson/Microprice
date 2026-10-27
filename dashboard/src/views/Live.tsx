@@ -4,6 +4,7 @@ import { EmptyState } from "../components/EmptyState";
 import { MetricTile } from "../components/MetricTile";
 import { OrderBookLadder } from "../components/OrderBookLadder";
 import { Panel } from "../components/Panel";
+import { DEMO, endpoints } from "../config";
 import { copy } from "../copy";
 import { formatClock, formatCount, formatPrice, formatSigned, formatUsdFromTicks } from "../format";
 import { liveStore } from "../store";
@@ -35,7 +36,11 @@ export function Live({ themeKey }: { themeKey: string }) {
       {copy.live.stop}
     </button>
   ) : (
-    <button type="button" className="button" onClick={() => liveStore.connect(gatewayUrl())}>
+    <button
+      type="button"
+      className="button"
+      onClick={() => (DEMO ? void liveStore.playRecorded(endpoints.replay) : liveStore.connect(gatewayUrl()))}
+    >
       {copy.live.start}
     </button>
   );
@@ -43,7 +48,7 @@ export function Live({ themeKey }: { themeKey: string }) {
   if (state.status === "idle") {
     return (
       <Panel title="Live replay">
-        <EmptyState message={copy.live.empty} action={control} />
+        <EmptyState message={DEMO ? copy.live.demoEmpty : copy.live.empty} action={control} />
       </Panel>
     );
   }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
+import { BrowserRouter, HashRouter, NavLink, Route, Routes } from "react-router-dom";
+import { assetUrl, DEMO } from "./config";
 import { copy } from "./copy";
 import { applyTheme, savedTheme, saveTheme, type ThemeChoice } from "./theme";
 import { Backtests } from "./views/Backtests";
@@ -18,14 +19,16 @@ export function App() {
     return () => queries.forEach((q) => q.removeEventListener("change", update));
   }, [choice]);
 
+  // Static hosts cannot rewrite deep links to index.html, so demo builds route by hash.
+  const Router = DEMO ? HashRouter : BrowserRouter;
   return (
-    <BrowserRouter>
+    <Router>
       <a className="skip-link" href="#main">
         {copy.skipLink}
       </a>
       <header className="app-header">
-        <a className="brand" href="/">
-          <img src="/favicon.svg" alt="" width={24} height={24} />
+        <a className="brand" href={assetUrl("")}>
+          <img src={assetUrl("favicon.svg")} alt="" width={24} height={24} />
           <span>{copy.appName}</span>
         </a>
         <nav aria-label="Views">
@@ -59,6 +62,6 @@ export function App() {
           <Route path="/sweeps" element={<Sweeps />} />
         </Routes>
       </main>
-    </BrowserRouter>
+    </Router>
   );
 }

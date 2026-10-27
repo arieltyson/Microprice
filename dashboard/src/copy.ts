@@ -7,6 +7,8 @@ export const copy = {
   nav: { live: "Live", backtests: "Backtests", sweeps: "Sweeps" },
   live: {
     empty: "No replay is running. Start one to stream a held-out session from the gateway.",
+    demoEmpty:
+      "This is a static demo. Start the replay to play back a recorded held-out session: NVDA on 22 October, signal strategy, one point every five seconds.",
     start: "Start replay",
     stop: "Stop replay",
     connecting: "Connecting to the gateway.",

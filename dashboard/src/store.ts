@@ -114,6 +114,7 @@ export class LiveStore {
   private queue: GatewayMessage[] = [];
   private frame = 0;
   private socket: WebSocket | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -133,7 +134,35 @@ export class LiveStore {
     };
   }
 
+  /** Plays a recorded session (static demo builds have no gateway to connect to). */
+  async playRecorded(url: string, intervalMs = 40): Promise<void> {
+    this.disconnect();
+    this.set({ ...emptyState(), status: "connecting" });
+    let messages: GatewayMessage[];
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(String(response.status));
+      messages = (await response.json()) as GatewayMessage[];
+    } catch {
+      this.set({ ...this.state, status: "disconnected" });
+      return;
+    }
+    let next = 0;
+    this.timer = setInterval(() => {
+      if (next >= messages.length) {
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
+        return;
+      }
+      this.enqueue(messages[next++]);
+    }, intervalMs);
+  }
+
   disconnect(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
     if (this.socket) {
       const socket = this.socket;
       this.socket = null;
