@@ -6,11 +6,15 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <algorithm>
 #include <array>
+#include <span>
+#include <type_traits>
 #include <optional>
 #include <vector>
 
 #include "microprice/feed/lobster.hpp"
+#include "microprice/market_maker.hpp"
 #include "microprice/order_book.hpp"
 
 namespace py = pybind11;
@@ -150,6 +154,73 @@ class Engine {
   OrderId next_aggressor_ = 1ULL << 62;
 };
 
+template <class T>
+std::span<const T> view(const py::array_t<T, py::array::c_style | py::array::forcecast>& a) {
+  return {a.data(), static_cast<std::size_t>(a.size())};
+}
+
+template <class T>
+py::array_t<T> to_array(const std::vector<T>& v) {
+  py::array_t<T> out(static_cast<py::ssize_t>(v.size()));
+  std::copy(v.begin(), v.end(), out.mutable_data());
+  return out;
+}
+
+using I64 = py::array_t<std::int64_t, py::array::c_style | py::array::forcecast>;
+using I32 = py::array_t<std::int32_t, py::array::c_style | py::array::forcecast>;
+using U64 = py::array_t<std::uint64_t, py::array::c_style | py::array::forcecast>;
+using I8 = py::array_t<std::int8_t, py::array::c_style | py::array::forcecast>;
+using F64 = py::array_t<double, py::array::c_style | py::array::forcecast>;
+
+py::dict py_run_market_maker(I64 ts, I32 type, U64 id, I64 size, I64 price, I8 direction, I64 grid_ns, F64 mid,
+                          F64 sigma2, F64 forecast, F64 sentiment, const py::dict& params) {
+  MarketMakerParams p;
+  const auto get = [&](const char* key, auto& field) {
+    if (params.contains(key)) {
+      field = params[key].cast<std::decay_t<decltype(field)>>();
+    }
+  };
+  get("gamma", p.gamma);
+  get("kappa", p.kappa);
+  get("tau_s", p.tau_s);
+  get("quote_lots", p.quote_lots);
+  get("max_inventory_lots", p.max_inventory_lots);
+  get("alpha", p.alpha);
+  get("beta", p.beta);
+  get("latency_ms", p.latency_ms);
+  get("min_sigma2", p.min_sigma2);
+  get("lot", p.lot);
+  const MarketInputs in{view(ts), view(type), view(id), view(size), view(price), view(direction),
+                        view(grid_ns), view(mid), view(sigma2), view(forecast), view(sentiment)};
+  MarketMakerResult r;
+  {
+    py::gil_scoped_release release;  // the run is pure C++; let other Python threads proceed
+    r = microprice::run_market_maker(in, p);
+  }
+  std::vector<std::int64_t> fill_ts, fill_price, fill_qty;
+  std::vector<std::int8_t> fill_side;
+  std::vector<double> fill_mid;
+  for (const Fill& f : r.fills) {
+    fill_ts.push_back(f.ts);
+    fill_side.push_back(static_cast<std::int8_t>(f.side));
+    fill_price.push_back(f.price);
+    fill_qty.push_back(f.qty);
+    fill_mid.push_back(f.mid);
+  }
+  py::dict out;
+  out["equity"] = to_array(r.equity);
+  out["inventory"] = to_array(r.inventory);
+  out["fill_ts"] = to_array(fill_ts);
+  out["fill_side"] = to_array(fill_side);
+  out["fill_price"] = to_array(fill_price);
+  out["fill_qty"] = to_array(fill_qty);
+  out["fill_mid"] = to_array(fill_mid);
+  out["quotes_placed"] = r.quotes_placed;
+  out["spread_capture"] = r.spread_capture;
+  out["final_pnl"] = r.final_pnl;
+  return out;
+}
+
 }  // namespace
 
 PYBIND11_MODULE(_engine, m) {
@@ -183,4 +254,7 @@ PYBIND11_MODULE(_engine, m) {
       .def("replay_top_of_book", &Engine::replay_top_of_book)
       .def("drain_events", &Engine::drain_events)
       .def("pending_events", &Engine::pending_events);
+
+  m.def("run_market_maker", &py_run_market_maker,
+        "Runs the Avellaneda-Stoikov market maker over replayed LOBSTER order flow.");
 }
