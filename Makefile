@@ -5,10 +5,13 @@ BUILD := build
 JOBS ?= 8
 SEC_USER_AGENT ?=
 
-.PHONY: all build test check bench bench-feed data headlines features forecast sweep evaluate analysis \
+.PHONY: all hooks build test check bench bench-feed data headlines features forecast sweep evaluate analysis \
         results gateway dashboard demo up clean clean-data
 
 all: build
+
+hooks:
+	git config core.hooksPath .githooks
 
 build:
 	cmake -S . -B $(BUILD) -DCMAKE_BUILD_TYPE=Release -DPython_EXECUTABLE=$(CURDIR)/research/.venv/bin/python

@@ -22,4 +22,4 @@ Include the affected file and commit, the steps to reproduce, and the impact you
 - AWS credentials come from the environment or AWS SSO and are never stored in the repository.
 - The kdb+ license file lives outside the repository.
 - Third-party market data is downloaded by script into `data/`, which is ignored by git.
-- A gitleaks scan runs in the CI workflow, which is triggered manually.
+- A gitleaks pre-commit hook blocks commits that contain secrets. Run `make hooks` once per clone to enable it. The same scan runs in the CI workflow on manual trigger.

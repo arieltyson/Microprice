@@ -85,6 +85,7 @@ Full figures, with the command behind each one: [docs/RESULTS.md](docs/RESULTS.m
 
 ```bash
 cd research && uv sync --extra spark --extra nlp && cd ..
+make hooks        # gitleaks pre-commit hook (needs `brew install gitleaks`)
 make build        # C++ engine, feed tools and the Python module
 make test         # C++, Python, R and dashboard tests
 make results      # data, headlines, forecasts, sweep, held-out evaluation, analysis, benchmarks
